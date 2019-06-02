@@ -1,3 +1,14 @@
 <resources>
-    <string name="app_name">" NeteaseDisc"</string>
+    <string name="app_name">音乐播放器</string>
+    <string name="LoadingActivityName">随时随地</string>
+    <string name="MusicName">Something just like this</string>
+    <string name="Musician">Cold Player/The Chainsmokers</string>
+    <string name="MyMusic">我的音乐</string>
+    <string name="OnlineMusic">在线音乐</string>
+    <string name="head">新增%1$d首可添加歌曲</string>
+    <string name="defaultSelectMode">全选</string>
+    <string name="SearchingMusic">正在扫描本地歌曲......</string>
+    <string name="StartSearching">开始扫描</string>
+    <string name="DefaultPath">sdcard</string>
+    <string name="Sure">确定</string>
 </resources>

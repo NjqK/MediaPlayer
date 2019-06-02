@@ -13,12 +13,6 @@ import android.widget.RelativeLayout;
 
 import com.kuro.musicplayer.R;
 
-/**
- * Created by AchillesL on 2016/11/18.
- */
-/**
- * 自定义一个控件，继承RelativeLayout
- * */
 @SuppressLint("NewApi")
 public class BackgourndAnimationRelativeLayout extends RelativeLayout {
 
@@ -32,6 +26,7 @@ public class BackgourndAnimationRelativeLayout extends RelativeLayout {
     private LayerDrawable layerDrawable;
     private ObjectAnimator objectAnimator;
     private int musicPicRes = -1;
+    private String musicPath = null;
 
     public BackgourndAnimationRelativeLayout(Context context) {
         this(context, null);
@@ -105,11 +100,16 @@ public class BackgourndAnimationRelativeLayout extends RelativeLayout {
         objectAnimator.start();
     }
 
-    public boolean isNeed2UpdateBackground(int musicPicRes) {
+    public boolean isNeedToUpdateBackground(int musicPicRes) {
         if (this.musicPicRes == -1) return true;
         if (musicPicRes != this.musicPicRes) {
             return true;
         }
         return false;
     }
+
+    public boolean isNeedToUpdateBackground(String  musicPicRes) {
+        return true;
+    }
+
 }

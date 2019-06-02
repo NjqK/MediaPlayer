@@ -8,10 +8,12 @@ import android.content.IntentFilter;
 import android.media.MediaPlayer;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 
-import com.kuro.musicplayer.activity.MainActivity;
-import com.kuro.musicplayer.model.MusicData;
+import com.kuro.musicplayer.activity.PlayActivity;
+import com.kuro.musicplayer.model.Music;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,7 +43,7 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
 
     private int mCurrentMusicIndex = 0;
     private boolean mIsMusicPause = false;
-    private List<MusicData> mMusicDatas = new ArrayList<>();
+    private List<Music> mMusicData = new ArrayList<>();
 
     private MusicReceiver mMusicReceiver = new MusicReceiver();
     private MediaPlayer mMediaPlayer = new MediaPlayer();
@@ -60,13 +62,15 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
     @Override
     public void onCreate() {
         super.onCreate();
+        mMediaPlayer = new MediaPlayer();
+        Log.i("-----Service", String.valueOf(mMediaPlayer));
         initBoardCastReceiver();
     }
 
     private void initMusicDatas(Intent intent) {
         if (intent == null) return;
-        List<MusicData> musicDatas = (List<MusicData>) intent.getSerializableExtra(MainActivity.PARAM_MUSIC_LIST);
-        mMusicDatas.addAll(musicDatas);
+        mMusicData = (List<Music>) intent.getSerializableExtra(PlayActivity.PARAM_MUSIC_LIST);
+        //mCurrentMusicIndex = intent.getIntExtra("index", 0);
     }
 
     private void initBoardCastReceiver() {
@@ -89,21 +93,28 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mMusicReceiver);
     }
 
-    private void play(final int index) {
-        if (index >= mMusicDatas.size()) return;
+    private void play(int index) {
+        if (index >= mMusicData.size()) {
+            index = 0;
+            mCurrentMusicIndex = 0;
+        }
+
         if (mCurrentMusicIndex == index && mIsMusicPause) {
             mMediaPlayer.start();
         } else {
             mMediaPlayer.stop();
             mMediaPlayer = null;
-
-            mMediaPlayer = MediaPlayer.create(getApplicationContext(), mMusicDatas.get(index)
-                    .getMusicRes());
+            try {
+                mMediaPlayer = new MediaPlayer();
+                mMediaPlayer.setDataSource(mMusicData.get(index).getPath());
+                mMediaPlayer.prepare();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             mMediaPlayer.start();
             mMediaPlayer.setOnCompletionListener(this);
             mCurrentMusicIndex = index;
             mIsMusicPause = false;
-
             int duration = mMediaPlayer.getDuration();
             sendMusicDurationBroadCast(duration);
         }
@@ -121,16 +132,14 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
     }
 
     private void next() {
-        if (mCurrentMusicIndex + 1 < mMusicDatas.size()) {
-            play(mCurrentMusicIndex + 1);
-        } else {
-            stop();
-        }
+        play(mCurrentMusicIndex+1);
     }
 
     private void last() {
         if (mCurrentMusicIndex != 0) {
             play(mCurrentMusicIndex - 1);
+        }else {
+            play(mMusicData.size()-1);
         }
     }
 
@@ -151,23 +160,29 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            if (action.equals(ACTION_OPT_MUSIC_PLAY)) {
-                play(mCurrentMusicIndex);
-            } else if (action.equals(ACTION_OPT_MUSIC_PAUSE)) {
-                pause();
-            } else if (action.equals(ACTION_OPT_MUSIC_LAST)) {
-                last();
-            } else if (action.equals(ACTION_OPT_MUSIC_NEXT)) {
-                next();
-            } else if (action.equals(ACTION_OPT_MUSIC_SEEK_TO)) {
-                seekTo(intent);
+            switch (action) {
+                case ACTION_OPT_MUSIC_PLAY:
+                    play(mCurrentMusicIndex);
+                    break;
+                case ACTION_OPT_MUSIC_PAUSE:
+                    pause();
+                    break;
+                case ACTION_OPT_MUSIC_LAST:
+                    last();
+                    break;
+                case ACTION_OPT_MUSIC_NEXT:
+                    next();
+                    break;
+                case ACTION_OPT_MUSIC_SEEK_TO:
+                    seekTo(intent);
+                    break;
             }
         }
     }
 
     private void sendMusicCompleteBroadCast() {
         Intent intent = new Intent(ACTION_STATUS_MUSIC_COMPLETE);
-        intent.putExtra(PARAM_MUSIC_IS_OVER, (mCurrentMusicIndex == mMusicDatas.size() - 1));
+        intent.putExtra(PARAM_MUSIC_IS_OVER, (mCurrentMusicIndex == mMusicData.size() - 1));
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 

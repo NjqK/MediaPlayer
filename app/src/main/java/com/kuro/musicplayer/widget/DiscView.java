@@ -10,6 +10,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawable;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawableFactory;
 import android.support.v4.view.PagerAdapter;
@@ -26,9 +28,13 @@ import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.kuro.musicplayer.R;
-import com.kuro.musicplayer.model.MusicData;
+import com.kuro.musicplayer.model.Music;
+import com.kuro.musicplayer.utils.BitMapHelper;
 import com.kuro.musicplayer.utils.DisplayUtil;
+import com.kuro.musicplayer.utils.ImageLoader;
 
+import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,7 +51,7 @@ public class DiscView extends RelativeLayout {
 
     private List<View> mDiscLayouts = new ArrayList<>();
 
-    private List<MusicData> mMusicDatas = new ArrayList<>();
+    private List<Music> mMusicDatas = new ArrayList<>();
     private List<ObjectAnimator> mDiscAnimators = new ArrayList<>();
     /*标记ViewPager是否处于偏移的状态*/
     private boolean mViewPagerIsOffset = false;
@@ -88,6 +94,8 @@ public class DiscView extends RelativeLayout {
         public void onMusicInfoChanged(String musicName, String musicAuthor);
         /*用于更新背景图片*/
         public void onMusicPicChanged(int musicPicRes);
+        /*用于更新网络图片*/
+        public void onMusicPicChanged(String path);
         /*用于更新音乐播放状态*/
         public void onMusicChanged(MusicChangedStatus musicChangedStatus);
     }
@@ -349,6 +357,40 @@ public class DiscView extends RelativeLayout {
         return layerDrawable;
     }
 
+    private Drawable getDiscDrawable(String path) {
+        int discSize = (int) (mScreenWidth * DisplayUtil.SCALE_DISC_SIZE);
+        int musicPicSize = (int) (mScreenWidth * DisplayUtil.SCALE_MUSIC_PIC_SIZE);
+
+        Bitmap bitmapDisc = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(getResources(), R
+                .drawable.ic_disc), discSize, discSize, false);
+        Bitmap temp =ImageLoader.getBitmapFromCache(path);
+        if (temp == null) {
+            Log.i("-----DiscView", "url: "+path+"被回收了");
+            temp = BitmapFactory.decodeResource(getResources(), R.mipmap.placeholder_disk_210);
+        }
+        Bitmap bitmapMusicPic = BitMapHelper.createScaleBitmap(temp, musicPicSize, musicPicSize, true);
+        BitmapDrawable discDrawable = new BitmapDrawable(bitmapDisc);
+        RoundedBitmapDrawable roundMusicDrawable = RoundedBitmapDrawableFactory.create
+                (getResources(), bitmapMusicPic);
+
+        //抗锯齿
+        discDrawable.setAntiAlias(true);
+        roundMusicDrawable.setAntiAlias(true);
+
+        Drawable[] drawables = new Drawable[2];
+        drawables[0] = roundMusicDrawable;
+        drawables[1] = discDrawable;
+
+        LayerDrawable layerDrawable = new LayerDrawable(drawables);
+        int musicPicMargin = (int) ((DisplayUtil.SCALE_DISC_SIZE - DisplayUtil
+                .SCALE_MUSIC_PIC_SIZE) * mScreenWidth / 2);
+        //调整专辑图片的四周边距，让其显示在正中
+        layerDrawable.setLayerInset(0, musicPicMargin, musicPicMargin, musicPicMargin,
+                musicPicMargin);
+
+        return layerDrawable;
+    }
+
     private Bitmap getMusicPicBitmap(int musicPicSize, int musicPicRes) {
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = true;
@@ -371,33 +413,69 @@ public class DiscView extends RelativeLayout {
                 musicPicRes, options), musicPicSize, musicPicSize, true);
     }
 
-    public void setMusicDataList(List<MusicData> musicDataList) {
+    public void setMusicDataList(List<Music> musicDataList) {
         if (musicDataList.isEmpty()) return;
 
         mDiscLayouts.clear();
         mMusicDatas.clear();
         mDiscAnimators.clear();
-        mMusicDatas.addAll(musicDataList);
+        mMusicDatas = musicDataList;
 
         int i = 0;
-        for (MusicData musicData : mMusicDatas) {
+        for (Music musicData : mMusicDatas) {
             View discLayout = LayoutInflater.from(getContext()).inflate(R.layout.layout_disc,
                     mVpContain, false);
-
             ImageView disc = (ImageView) discLayout.findViewById(R.id.ivDisc);
-            disc.setImageDrawable(getDiscDrawable(musicData.getMusicPicRes()));
 
+            if (musicData.getImagePath() != null) {
+                disc.setImageDrawable(getDiscDrawable(musicData.getImagePath()));
+            }else if (musicData.getNetImagePath() != null){
+                disc.setImageDrawable(getDiscDrawable(musicData.getNetImagePath()));
+            } else {
+                disc.setImageDrawable(getDiscDrawable(R.mipmap.placeholder_disk_210));
+            }
             mDiscAnimators.add(getDiscObjectAnimator(disc, i++));
             mDiscLayouts.add(discLayout);
         }
         mViewPagerAdapter.notifyDataSetChanged();
 
-        MusicData musicData = mMusicDatas.get(0);
+        Music musicData = mMusicDatas.get(0);
         if (mIPlayInfo != null) {
-            mIPlayInfo.onMusicInfoChanged(musicData.getMusicName(), musicData.getMusicAuthor());
-            mIPlayInfo.onMusicPicChanged(musicData.getMusicPicRes());
+            mIPlayInfo.onMusicInfoChanged(musicData.getMusicName(), musicData.getMusician());
+            if (musicData.getImagePath() != null) {
+                mIPlayInfo.onMusicPicChanged(musicData.getImagePath());
+            }
+            if (musicData.getNetImagePath() != null) {
+                mIPlayInfo.onMusicPicChanged(musicData.getNetImagePath());
+            }
         }
     }
+
+    private void setNetImage(final Music musicData) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Drawable drawable = getDiscDrawable(musicData.getNetImagePath());
+                Message m = Message.obtain();
+                m.what = 0x123;
+                m.obj = drawable;
+                handler.sendMessage(m);
+            }
+        }).start();
+    }
+
+    @SuppressLint("HandlerLeak")
+    private Handler handler = new Handler(){
+        @Override
+        public void handleMessage(Message msg) {
+            if (msg.what == 0x123) {
+                View discLayout = LayoutInflater.from(getContext()).inflate(R.layout.layout_disc,
+                        mVpContain, false);
+                ImageView disc = (ImageView) discLayout.findViewById(R.id.ivDisc);
+                disc.setImageDrawable((Drawable) msg.obj);
+            }
+        }
+    };
 
     private ObjectAnimator getDiscObjectAnimator(ImageView disc, final int i) {
         ObjectAnimator objectAnimator = ObjectAnimator.ofFloat(disc, View.ROTATION, 0, 360);
@@ -475,15 +553,20 @@ public class DiscView extends RelativeLayout {
 
     public void notifyMusicInfoChanged(int position) {
         if (mIPlayInfo != null) {
-            MusicData musicData = mMusicDatas.get(position);
-            mIPlayInfo.onMusicInfoChanged(musicData.getMusicName(), musicData.getMusicAuthor());
+            Music musicData = mMusicDatas.get(position);
+            mIPlayInfo.onMusicInfoChanged(musicData.getMusicName(), musicData.getMusician());
         }
     }
 
     public void notifyMusicPicChanged(int position) {
         if (mIPlayInfo != null) {
-            MusicData musicData = mMusicDatas.get(position);
-            mIPlayInfo.onMusicPicChanged(musicData.getMusicPicRes());
+            Music musicData = mMusicDatas.get(position);
+            if (musicData.getImagePath() != null) {
+                mIPlayInfo.onMusicPicChanged(musicData.getImagePath());
+            }
+            if (musicData.getNetImagePath() != null) {
+                mIPlayInfo.onMusicPicChanged(musicData.getNetImagePath());
+            }
         }
     }
 
