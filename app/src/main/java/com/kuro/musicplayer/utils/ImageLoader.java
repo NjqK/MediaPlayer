@@ -18,44 +18,19 @@ import com.kuro.musicplayer.R;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
 
-public class ImageLoader{
+public class ImageLoader {
     private ImageView mImageview;
     private String mUrl;
     //创建缓存
-    private static LruCache<String, Bitmap> mCaches;
+    public static LruCache<String, Bitmap> mCaches;
     private ListView mListView;
     private Set<NewsAsyncTask> mTask;
-
-    public ImageLoader() {
-        mTask = new HashSet<>();
-        //获得最大的缓存空间
-        int maxMemory = (int) Runtime.getRuntime().maxMemory();
-        //赋予缓存区最大缓存的四分之一进行缓存
-        int cacheSize = maxMemory / 4;
-        Log.i("----cache max size", String.valueOf(cacheSize/1024/1024)+"m");
-        mCaches = new LruCache<String, Bitmap>(cacheSize) {
-            @Override
-            protected int sizeOf(String key, Bitmap value) {
-                //在每次存入缓存的时候调用
-                Log.i("----BitMapSize", String.valueOf(value.getByteCount())+"byte");
-                return value.getByteCount();
-            }
-
-        };
-    }
-
-    public ListView getmListView() {
-        return mListView;
-    }
-
-    public void setmListView(ListView mListView) {
-        this.mListView = mListView;
-    }
 
     public ImageLoader(ListView listView) {
         mListView = listView;

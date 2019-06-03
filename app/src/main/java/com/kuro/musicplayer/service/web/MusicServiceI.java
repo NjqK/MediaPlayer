@@ -2,7 +2,9 @@ package com.kuro.musicplayer.service.web;
 
 import com.kuro.musicplayer.model.OnlineMusicBean;
 import com.kuro.musicplayer.model.OnlineMusicDownloadBean;
+import com.kuro.musicplayer.model.OnlineMusicPlaylistDetail;
 import com.kuro.musicplayer.model.OnlineMusicRequest;
+import com.kuro.musicplayer.model.OnlineMusicsDetail;
 import com.kuro.musicplayer.model.OnlineSongSheetBean;
 
 import java.util.Map;
@@ -23,5 +25,11 @@ public interface MusicServiceI {
     //https://api.imjad.cn/cloudmusic/?type=song&id=38019248&br=128000
     @GET("cloudmusic/")
     Call<OnlineMusicDownloadBean> getMusics(@Query("type") String type, @Query("id") long id);
+
+    //官方的API
+    @GET("playlist/detail/")
+    Call<OnlineMusicPlaylistDetail> getPlaylistDetailOfficial( @Query("id") long id);
+    @GET("song/detail/")
+    Call<OnlineMusicsDetail> getMusicstDetailOfficial(@Query("ids") int[] ids);
 
 }
