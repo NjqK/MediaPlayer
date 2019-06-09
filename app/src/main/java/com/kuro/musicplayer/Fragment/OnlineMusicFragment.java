@@ -3,11 +3,13 @@ package com.kuro.musicplayer.Fragment;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -20,6 +22,7 @@ import android.widget.Toast;
 
 import com.kuro.musicplayer.Adapter.AsyncOnlineMusicAdapter;
 import com.kuro.musicplayer.R;
+import com.kuro.musicplayer.Sqlite.DbHelper;
 import com.kuro.musicplayer.activity.PlayActivity;
 import com.kuro.musicplayer.model.Music;
 import com.kuro.musicplayer.model.OnlineMusicBean;
@@ -27,6 +30,7 @@ import com.kuro.musicplayer.model.OnlineMusicDownloadBean;
 import com.kuro.musicplayer.model.OnlineMusicPlaylistDetail;
 import com.kuro.musicplayer.model.OnlineMusicsDetail;
 import com.kuro.musicplayer.model.OnlineSongSheetBean;
+import com.kuro.musicplayer.utils.ImageLoader;
 import com.kuro.musicplayer.utils.WebRequestUtil;
 
 import java.io.Serializable;
@@ -37,14 +41,12 @@ public class OnlineMusicFragment extends Fragment {
     private static final String TAG = "-----MusicFragment";
     private View view;
     private ListView listView;
-    //private List<OnlineMusicBean> musics;
     private List<Music> music;
     private LinearLayout addMusic;
+    private DbHelper helper;
 
-    public interface OnlineCallBack {
-        void downloadMusic();
-    }
 
+    @RequiresApi(api = Build.VERSION_CODES.O_MR1)
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -54,6 +56,7 @@ public class OnlineMusicFragment extends Fragment {
         addMusic.setVisibility(View.GONE);
         //initUI();
         bindOnClickListener();
+        helper = DbHelper.setDatabase(getActivity());
         return view;
     }
 
@@ -65,7 +68,10 @@ public class OnlineMusicFragment extends Fragment {
                 Intent intent = new Intent(getActivity(), PlayActivity.class);
                 intent.putExtra("index", position);
                 Bundle bundle = new Bundle();
-
+                /*if (ImageLoader.mCaches != null) {
+                    bundle.putSerializable("bitmaps", (Serializable) ImageLoader.mCaches);
+                }*/
+                //bundle.putSerializable("bitmaps", (Serializable) ImageLoader.mCaches);
                 bundle.putSerializable("musicList", (Serializable) music);
                 intent.putExtras(bundle);
                 startActivity(intent);
@@ -103,10 +109,12 @@ public class OnlineMusicFragment extends Fragment {
                     musics.add(m);
                 }*/
                 List<Music> musics = new ArrayList<Music>();
+                List<Music> db = helper.getAllMusicByType(1);
                 OnlineMusicPlaylistDetail detail = WebRequestUtil.getPlaylistDetailOfficial();
                 //OnlineMusicsDetail musicsDetail = WebRequestUtil.getMusicsDetail()
                 if (detail.getCode() != 200) {
                     Log.i("----Net", "网络请求失败");
+                    return;
                 }
                 OnlineMusicPlaylistDetail.ResultBean resultBean = detail.getResult();
                 List<OnlineMusicPlaylistDetail.ResultBean.TracksBean> tracks = resultBean.getTracks();
@@ -118,30 +126,29 @@ public class OnlineMusicFragment extends Fragment {
                 /*OnlineMusicsDetail musicsDetail = WebRequestUtil.getMusicsDetail(ids);*/
                 for (int i = 0; i < tracks.size(); i++) {
                     Music music = new Music();
-                    music.setId(tracks.get(i).getId());
+                    music.setnId(tracks.get(i).getId());
                     music.setMusicName(tracks.get(i).getName());
                     music.setMusician(tracks.get(i).getArtists().get(0).getName());
                     //http://music.163.com/song/media/outer/url?id=476592630.mp3
-                    music.setPath("http://music.163.com/song/media/outer/url?id="+music.getId());
+                    music.setPath("http://music.163.com/song/media/outer/url?id="+music.getnId());
                     music.setNetImagePath(tracks.get(i).getAlbum().getPicUrl());
-                    musics.add(music);
+                    music.setType(1);
+                    if (!db.contains(music)) {
+                        musics.add(music);
+                    }
                 }
+
+                //网络的结果也放到数据库里把
+                helper.addMusicList(musics);
+                //添加新的到数据库
+                db.addAll(musics);
+
                 Message m = new Message();
                 m.what = 0x123;
-                m.obj = musics;
+                m.obj = db;
                 handler.sendMessage(m);
             }
         }).start();
-    }
-
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-    }
-
-    @Override
-    public void onDetach() {
-        super.onDetach();
     }
 
     @SuppressLint("HandlerLeak")
@@ -153,7 +160,8 @@ public class OnlineMusicFragment extends Fragment {
                 if (music == null || music.size() == 0) {
                     Toast.makeText(getActivity(), "获取列表出错", Toast.LENGTH_SHORT).show();
                 } else {
-                    listView.setAdapter(new AsyncOnlineMusicAdapter(getActivity(),music, listView));
+                    AsyncOnlineMusicAdapter adapter = new AsyncOnlineMusicAdapter(getActivity(), music, listView);
+                    listView.setAdapter(adapter);
                 }
             }
         }

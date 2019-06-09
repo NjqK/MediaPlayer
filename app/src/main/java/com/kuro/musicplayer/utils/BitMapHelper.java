@@ -40,17 +40,20 @@ public class BitMapHelper {
     }
 
     public static Bitmap createScaleBitmap(Bitmap src, int dstWidth, int dstHeight, boolean fliter) {
-        // 如果是放大图片，filter决定是否平滑，如果是缩小图片，filter无影响，我们这里是缩小图片，所以直接设置为false
+        // 我们用createBitmap创建的Bitmap且没有被硬件加速Canvas draw过，则主动调用recycle产生的意义比较小，
+        // 仅释放了native里的SkPixelRef的内存，这种情况我觉得可以不主动调用recycle。
+        // 在Android2.3时代，Bitmap的引用是放在堆中的，
+        // 而Bitmap的数据部分是放在栈中的，需要用户调用recycle方法手动进行内存回收，
+        // 而在Android2.3之后，整个Bitmap，包括数据和引用，都放在了堆中，
+        // 这样，整个Bitmap的回收就全部交给GC了，这个recycle方法就再也不需要使用了。
         Bitmap dst = Bitmap.createScaledBitmap(src, dstWidth, dstHeight, fliter);
-        if (src != dst) { // 如果没有缩放，那么不回收
-            src.recycle(); // 释放Bitmap的native像素数组
-        }
+        src.recycle();
         return dst;
     }
 
     public static Bitmap createScaleBitmap(String src, int dstWidth, int dstHeight) {
         Bitmap temp = getURLimage(src);
-        return createScaleBitmap(temp, dstWidth, dstHeight);
+        return createScaleBitmap(temp, dstWidth, dstHeight, false);
     }
 
     public static Bitmap decodeSampledBitmapFromFile(String pathName, int reqWidth, int reqHeight) {
@@ -60,7 +63,7 @@ public class BitMapHelper {
         options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
         options.inJustDecodeBounds = false;
         Bitmap src = BitmapFactory.decodeFile(pathName, options);
-        return createScaleBitmap(src, reqWidth, reqHeight);
+        return createScaleBitmap(src, reqWidth, reqHeight, false);
     }
 
     private static Bitmap getURLimage(String url) {

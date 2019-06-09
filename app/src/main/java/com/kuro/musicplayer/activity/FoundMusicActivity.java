@@ -1,8 +1,6 @@
 package com.kuro.musicplayer.activity;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -12,8 +10,6 @@ import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.util.Log;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -38,13 +34,11 @@ public class FoundMusicActivity extends BaseActivity implements View.OnClickList
     private LinearLayout box;
     private ImageView out;
     private Button begin,sure;
-    private ListView musiclist;
+    private ListView musicList;
     //sd卡里找的mp3
     private List<Music> foundResult;
     //选中的
-    private List<Music> result;
-    //数据库里的
-    private List<Music> dbResult= null;
+    private List<Music> selectedResult;
     private FoundMusicListAdapter musicListAdapter;
     private DbHelper helper;
     private boolean all = false;
@@ -58,15 +52,15 @@ public class FoundMusicActivity extends BaseActivity implements View.OnClickList
 
     @RequiresApi(api = Build.VERSION_CODES.O_MR1)
     private void init() {
+        foundResult = new ArrayList<Music>();
+        helper = DbHelper.setDatabase(this);
         initUI();
         bindComponent();
         bindListener();
-        foundResult = new ArrayList<Music>();
-        helper = DbHelper.setDatabase(this);
     }
 
     private void bindListener() {
-        musiclist.setOnItemClickListener(this);
+        musicList.setOnItemClickListener(this);
         out.setOnClickListener(this);
         begin.setOnClickListener(this);
         sure.setOnClickListener(this);
@@ -75,7 +69,7 @@ public class FoundMusicActivity extends BaseActivity implements View.OnClickList
 
     private void bindListAdapter(List<Music> list) {
         musicListAdapter = new FoundMusicListAdapter(list, this);
-        musiclist.setAdapter(musicListAdapter);//绑定适配器
+        musicList.setAdapter(musicListAdapter);
     }
 
     private void bindComponent() {
@@ -86,7 +80,7 @@ public class FoundMusicActivity extends BaseActivity implements View.OnClickList
         begin= (Button) findViewById(R.id.begin_search);
         sure= (Button) findViewById(R.id.sure_list);
         box= (LinearLayout) findViewById(R.id.show_local);
-        musiclist= (ListView) findViewById(R.id.show_music);
+        musicList = (ListView) findViewById(R.id.show_music);
         allChoose = (TextView) findViewById(R.id.allChoose);
     }
 
@@ -103,8 +97,8 @@ public class FoundMusicActivity extends BaseActivity implements View.OnClickList
         switch (v.getId()){
             case R.id.out_local:
                 //添加新的
-                if (result != null) {
-                    helper.addMusicList(result);
+                if (selectedResult != null) {
+                    helper.addMusicList(selectedResult);
                 }
                 finish();
                 break;
@@ -135,15 +129,16 @@ public class FoundMusicActivity extends BaseActivity implements View.OnClickList
                 break;
             case R.id.sure_list:
                 List<Music> selectedResult = musicListAdapter.getSelected();
-                result = new ArrayList<Music>();
-                dbResult = helper.getAllMusic();
+                this.selectedResult = new ArrayList<Music>();
+                //数据库里的
+                List<Music> dbResult = helper.getAllMusicByType(0);
                 for (Music m : selectedResult
                         ) {
                     if (!dbResult.contains(m)) {
-                        result.add(m);
+                        this.selectedResult.add(m);
                     }
                 }
-                head.setText(String.format(getResources().getString(R.string.head),result.size()));
+                head.setText(String.format(getResources().getString(R.string.head), this.selectedResult.size()));
                 break;
         }
     }
@@ -166,7 +161,12 @@ public class FoundMusicActivity extends BaseActivity implements View.OnClickList
                 m.obj = path.getAbsolutePath();
                 myHandler.sendMessage(m);
                 List<Music> result = FindLocalMusicsHelper.getSDcardFile(path);
-                Log.i("-----FoundMusicActivity", "path: "+path+" result size: "+result.size());
+                Log.i("-----FoundMusicActivity", "path: "+path+" selectedResult size: "+result.size());
+                try {
+                    sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 m = new Message();
                 m.what=0x123;
                 m.obj=result;

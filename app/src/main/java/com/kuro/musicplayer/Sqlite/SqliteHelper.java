@@ -17,7 +17,10 @@ public class SqliteHelper extends SQLiteOpenHelper {
             + "name text, "
             + "musician text, "
             + "path text, "
-            + "image_path integer)";//数据库里的表
+            + "net_path text, "
+            + "image_path integer, "
+            +  "type integer, "
+            +  " n_id integer)";//数据库里的表
 
     public SqliteHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, null, version);

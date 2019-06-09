@@ -21,14 +21,14 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/tv_myMusic_1"
+            android:id="@+id/tv_myMusic"
             android:text="@string/MyMusic"
             android:textColor="@color/Active"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/tv_myMusic_2"
+            android:id="@+id/tv_online_music"
             android:text="@string/OnlineMusic"
             android:textColor="@color/notActive"/>
 

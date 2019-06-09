@@ -1,7 +1,9 @@
 package com.kuro.musicplayer.Adapter;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.util.Log;
+import android.util.LruCache;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,18 +28,23 @@ public class AsyncOnlineMusicAdapter extends BaseAdapter implements AbsListView.
     private int mEnd;
     //创建静态数组保存图片的url地址
     public static String[] URLS;
+    private LruCache<String, Bitmap> cache;
     private boolean mFirstIn;
+    private ListView mListView;
 
     public AsyncOnlineMusicAdapter(Context context, List<Music> data, ListView listView) {
         mList = data;
+        mListView = listView;
         mInflater = LayoutInflater.from(context);
-        mImageLoader = new ImageLoader(listView);
+        mImageLoader = ImageLoader.getImageLoaderSingleton();
+        mImageLoader.setmListView(listView);
         URLS = new String[data.size()];
         for(int i=0;i<data.size();i++){
             URLS[i] = data.get(i).getNetImagePath();
         }
         listView.setOnScrollListener(this);
         mFirstIn = true;
+        cache = ImageLoader.mCaches;
     }
 
     @Override
@@ -69,11 +76,15 @@ public class AsyncOnlineMusicAdapter extends BaseAdapter implements AbsListView.
             v = (ViewHolder) convertView.getTag();
         }
         //设置默认显示的图片
-        v.albumBmp.setImageResource(R.mipmap.placeholder_disk_210);
+        if (cache.get(URLS[position]) != null) {
+            v.albumBmp.setImageBitmap(cache.get(URLS[position]));
+        }else {
+            Log.i("----AsyncAdapter", "cache size: " + cache.size());
+            v.albumBmp.setImageResource(R.mipmap.placeholder_disk_210);
+        }
         //避免缓存影响使同一位置图片加载多次混乱
         String url = mList.get(position).getNetImagePath();
         v.albumBmp.setTag(url);
-        //   new ImageLoader().showImageByThread(v.iv_title, url);
         //mImageLoader.showImageByAsyncTask(v.albumBmp, url);
         v.name.setText(mList.get(position).getMusicName());
         v.musician.setText(mList.get(position).getMusician());

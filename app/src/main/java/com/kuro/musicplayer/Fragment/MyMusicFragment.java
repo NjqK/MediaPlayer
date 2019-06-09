@@ -42,12 +42,7 @@ public class MyMusicFragment extends Fragment {
     private ListView listView;
     private LinearLayout addMusic;
     private List<Music> musics;
-    private MyMusicCallbacks callbacks;
     private final File path = Environment.getExternalStorageDirectory();
-
-    public interface MyMusicCallbacks {
-        void onItemSelected(Music music);
-    }
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -100,7 +95,8 @@ public class MyMusicFragment extends Fragment {
 
     @SuppressLint("NewApi")
     private void initUI() {
-        musics = DbHelper.setDatabase(getActivity()).getAllMusic();
+        //0代表本地
+        musics = DbHelper.setDatabase(getActivity()).getAllMusicByType(0);
 
         if (musics.size() == 0) {
             Toast.makeText(getActivity(), "尚未有本地音乐, 请扫描添加!", Toast.LENGTH_SHORT).show();
@@ -108,21 +104,6 @@ public class MyMusicFragment extends Fragment {
             addMusic.setVisibility(View.GONE);
             listView.setAdapter(new MusicListAdapter(musics, getActivity()));
         }
-    }
-
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        if (!(context instanceof MyMusicCallbacks)) {
-            throw new IllegalStateException("aaaa");
-        }
-        callbacks = (MyMusicCallbacks) context;
-    }
-
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        callbacks = null;
     }
 }
 

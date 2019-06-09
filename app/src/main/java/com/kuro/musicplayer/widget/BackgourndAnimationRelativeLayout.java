@@ -101,15 +101,11 @@ public class BackgourndAnimationRelativeLayout extends RelativeLayout {
     }
 
     public boolean isNeedToUpdateBackground(int musicPicRes) {
-        if (this.musicPicRes == -1) return true;
-        if (musicPicRes != this.musicPicRes) {
-            return true;
-        }
-        return false;
+        return this.musicPicRes == -1 || musicPicRes != this.musicPicRes;
     }
 
-    public boolean isNeedToUpdateBackground(String  musicPicRes) {
-        return true;
+    public boolean isNeedToUpdateBackground(String  musicPath) {
+        return this.musicPath == null || !this.musicPath.equals(musicPath);
     }
 
 }

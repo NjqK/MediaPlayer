@@ -28,7 +28,7 @@
         <activity android:name=".activity.FoundMusicActivity"
             android:screenOrientation="portrait"/>
         <service
-            android:name=".service.MusicService"
+            android:name=".service.MusicPlayerService"
             android:enabled="true"
             android:exported="false" />
 

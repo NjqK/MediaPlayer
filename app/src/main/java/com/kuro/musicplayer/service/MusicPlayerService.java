@@ -5,23 +5,27 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
 import android.media.MediaPlayer;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.util.LruCache;
 
 import com.kuro.musicplayer.activity.PlayActivity;
 import com.kuro.musicplayer.model.Music;
+import com.kuro.musicplayer.utils.BitMapHelper;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 
 /**
  * Created by AchillesL on 2016/11/18.
  */
 
-public class MusicService extends Service implements MediaPlayer.OnCompletionListener {
+public class MusicPlayerService extends Service implements MediaPlayer.OnCompletionListener {
 
     /*操作指令*/
     public static final String ACTION_OPT_MUSIC_PLAY = "ACTION_OPT_MUSIC_PLAY";
@@ -44,7 +48,7 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
     private int mCurrentMusicIndex = 0;
     private boolean mIsMusicPause = false;
     private List<Music> mMusicData = new ArrayList<>();
-
+    private LruCache<String, Bitmap> cache;
     private MusicReceiver mMusicReceiver = new MusicReceiver();
     private MediaPlayer mMediaPlayer = new MediaPlayer();
 

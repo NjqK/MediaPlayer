@@ -9,15 +9,15 @@ import android.widget.LinearLayout;
 
 import com.kuro.musicplayer.R;
 
-public class mydialog extends Dialog implements View.OnClickListener{
+public class MyDialog extends Dialog implements View.OnClickListener{
     private Context context;
     private LinearLayout l1,l2;
     private LeaveMyDialogListener listener;
-    public mydialog(@NonNull Context context) {
+    public MyDialog(@NonNull Context context) {
         super(context);
         this.context=context;
     }
-    public mydialog(Context context, int theme, LeaveMyDialogListener listener){
+    public MyDialog(Context context, int theme, LeaveMyDialogListener listener){
         super(context, theme);
         this.context = context;
         this.listener = listener;

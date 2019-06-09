@@ -24,6 +24,7 @@ public class FindLocalMusicsHelper {
                     music.setMusician(temp[0].trim());
                     music.setPath(childFile.getAbsolutePath());
                     music.setImagePath(R.raw.ic_music1);
+                    music.setType(0);
                     if (!mp3List.contains(music)) {
                         mp3List.add(music);
                     }

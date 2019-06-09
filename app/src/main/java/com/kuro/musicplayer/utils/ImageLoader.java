@@ -27,39 +27,44 @@ import java.util.Set;
 public class ImageLoader {
     private ImageView mImageview;
     private String mUrl;
-    //创建缓存
     public static LruCache<String, Bitmap> mCaches;
     private ListView mListView;
     private Set<NewsAsyncTask> mTask;
 
-    public ImageLoader(ListView listView) {
-        mListView = listView;
+    private final static ImageLoader imageLoader = new ImageLoader();
+
+    public static ImageLoader getImageLoaderSingleton() {
+        return imageLoader;
+    }
+
+    public void setmListView(ListView mListView) {
+        this.mListView = mListView;
+    }
+
+    private ImageLoader() {
         mTask = new HashSet<>();
-        //获得最大的缓存空间
+        //获得最大的内存空间
         int maxMemory = (int) Runtime.getRuntime().maxMemory();
-        //赋予缓存区最大缓存的四分之一进行缓存
-        int cacheSize = maxMemory / 4;
-        Log.i("----cache max size", String.valueOf(cacheSize/1024/1024)+"m");
+        int cacheSize = maxMemory / 3;
+        //Log.i("----cache max size", String.valueOf(cacheSize/1024/1024)+"m");
         mCaches = new LruCache<String, Bitmap>(cacheSize) {
             @Override
             protected int sizeOf(String key, Bitmap value) {
                 //在每次存入缓存的时候调用
-                Log.i("----BitMapSize", String.valueOf(value.getByteCount())+"byte");
+                //Log.i("----BitMapSize", String.valueOf(value.getByteCount())+"byte");
                 return value.getByteCount();
             }
-
         };
     }
 
     //将图片通过url与bitmap的键值对形式添加到缓存中
     public void addBitmapToCache(String url, Bitmap bitmap) {
         if (getBitmapFromCache(url) == null) {
-            Log.i("-----Put Cache", "put url: "+url);
+            //Log.i("-----Put Cache", "put url: "+url);
             mCaches.put(url, bitmap);
         }
     }
 
-    //通过缓存得到图片
     public static Bitmap getBitmapFromCache(String url) {
         return mCaches.get(url);
     }
@@ -69,8 +74,9 @@ public class ImageLoader {
         @Override
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
-            if (mImageview.getTag().equals(mUrl))
+            if (mImageview.getTag().equals(mUrl)) {
                 mImageview.setImageBitmap((Bitmap) msg.obj);
+            }
         }
     };
 
@@ -94,14 +100,13 @@ public class ImageLoader {
 
     public void showImageByAsyncTask(ImageView imageView, String url) {
         //先从缓存中获取图片
-        Log.i("-----Async Task", url);
         Bitmap bitmap = getBitmapFromCache(url);
         if (bitmap == null) {
             Log.i("-----Bitmap", "Missed " + url);
-            imageView.setImageResource(R.mipmap.placeholder_disk_210);
-            /*bitmap = getBitmapFromUrl(url);
-            addBitmapToCache(url, bitmap);
-            imageView.setImageBitmap(bitmap);*/
+            //imageView.setImageResource(R.mipmap.placeholder_disk_210);
+            NewsAsyncTask task = new NewsAsyncTask(url);
+            task.execute(url);
+            mTask.add(task);
         } else {
             Log.i("-----Bitmap", "Cached  " + url);
             imageView.setImageBitmap(bitmap);
@@ -134,7 +139,6 @@ public class ImageLoader {
          */
 
         public NewsAsyncTask( String url) {
-            //         mImageview = imageView;
             mUrl = url;
         }
 
@@ -146,17 +150,18 @@ public class ImageLoader {
         @Override
         protected Bitmap doInBackground(String... params) {
             String url = params[0];
-            //从网络获取图片
-            //Bitmap bitmap = getBitmapFromUrl(url);
             Bitmap bitmap = getBitmapFromCache(url);
-            //将图片加入缓存中
             if (bitmap == null) {
                 ImageView imageView = (ImageView) mListView.findViewWithTag(mUrl);
                 bitmap = getBitmapFromUrl(url);
                 //压缩bitmap, 避免缓冲区一直溢出导致的性能问题， 避免OOM
                 //Log.i("----", imageView.getWidth()+" "+imageView.getHeight());
                 //内存紧张时可能就被jvm回收了
-                bitmap = BitMapHelper.createScaleBitmap(bitmap, imageView.getWidth(), imageView.getHeight());
+                if (imageView == null) {
+                    bitmap = BitMapHelper.createScaleBitmap(bitmap, 100, 100, false);
+                } else {
+                    bitmap = BitMapHelper.createScaleBitmap(bitmap, imageView.getWidth(), imageView.getHeight(), false);
+                }
                 addBitmapToCache(url, bitmap);
             }
             return bitmap;
@@ -196,6 +201,7 @@ public class ImageLoader {
                 task.execute(url);
                 mTask.add(task);
             } else {
+                Log.i("-----LoadImg", "id: "+i);
                 ImageView imageView = (ImageView) mListView.findViewWithTag(url);
                 imageView.setImageBitmap(bitmap);
             }

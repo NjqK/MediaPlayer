@@ -5,8 +5,17 @@
     android:layout_height="match_parent"
     android:id="@+id/main_activity">
     <include layout="@layout/topbar_layout"/>
-    <FrameLayout
+    <!--<FrameLayout
         android:id="@+id/main_activity_fragment"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent"/>-->
+    <android.support.v4.view.ViewPager
+        android:id="@+id/vpFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <FrameLayout
+            android:id="@+id/main_activity_fragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+    </android.support.v4.view.ViewPager>
 </LinearLayout>

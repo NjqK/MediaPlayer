@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PersistableBundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.util.LruCache;
@@ -16,6 +17,8 @@ import com.kuro.musicplayer.utils.ImageLoader;
 import java.io.Serializable;
 
 public class BaseActivity extends AppCompatActivity {
+
+    protected LruCache<String, Bitmap> cache = ImageLoader.mCaches;
 
     protected void setStatusBarFullTransparent() {
         if (Build.VERSION.SDK_INT >= 21) {//21表示5.0

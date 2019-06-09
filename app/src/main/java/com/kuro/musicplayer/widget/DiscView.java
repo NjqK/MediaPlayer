@@ -18,6 +18,7 @@ import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.util.LruCache;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -48,8 +49,9 @@ public class DiscView extends RelativeLayout {
     private ViewPager mVpContain;
     private ViewPagerAdapter mViewPagerAdapter;
     private ObjectAnimator mNeedleAnimator;
-
+    private LruCache<String, Bitmap> cache = ImageLoader.mCaches;
     private List<View> mDiscLayouts = new ArrayList<>();
+    private List<Bitmap> gc = new ArrayList<Bitmap>();
 
     private List<Music> mMusicDatas = new ArrayList<>();
     private List<ObjectAnimator> mDiscAnimators = new ArrayList<>();
@@ -190,7 +192,7 @@ public class DiscView extends RelativeLayout {
         mVpContain.setLayoutParams(layoutParams);
     }
 
-    /**
+    /*
      * 取消其他页面上的动画，并将图片旋转角度复原
      */
     private void resetOtherDiscAnimation(int position) {
@@ -363,16 +365,21 @@ public class DiscView extends RelativeLayout {
 
         Bitmap bitmapDisc = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(getResources(), R
                 .drawable.ic_disc), discSize, discSize, false);
-        Bitmap temp =ImageLoader.getBitmapFromCache(path);
-        if (temp == null) {
-            Log.i("-----DiscView", "url: "+path+"被回收了");
+        Bitmap temp;
+        if (cache.get(path) == null) {
+            Log.i("-----DiscView", "url: "+path+"未命中");
             temp = BitmapFactory.decodeResource(getResources(), R.mipmap.placeholder_disk_210);
+        } else {
+            //temp = cache.get(path);
+            temp = cache.get(path).copy(Bitmap.Config.RGB_565, true);
         }
-        Bitmap bitmapMusicPic = BitMapHelper.createScaleBitmap(temp, musicPicSize, musicPicSize, true);
+        temp = BitMapHelper.createScaleBitmap(temp, musicPicSize, musicPicSize, true);
+        gc.add(temp);
+        //cache.put(path, temp);
         BitmapDrawable discDrawable = new BitmapDrawable(bitmapDisc);
         RoundedBitmapDrawable roundMusicDrawable = RoundedBitmapDrawableFactory.create
-                (getResources(), bitmapMusicPic);
-
+                (getResources(), temp);
+        //temp.recycle();
         //抗锯齿
         discDrawable.setAntiAlias(true);
         roundMusicDrawable.setAntiAlias(true);
@@ -427,7 +434,8 @@ public class DiscView extends RelativeLayout {
                     mVpContain, false);
             ImageView disc = (ImageView) discLayout.findViewById(R.id.ivDisc);
 
-            if (musicData.getImagePath() != null) {
+            if (musicData.getImagePath() != null && musicData.getImagePath() != 0) {
+                Log.i("----DiskView", String.valueOf(musicData.getImagePath()));
                 disc.setImageDrawable(getDiscDrawable(musicData.getImagePath()));
             }else if (musicData.getNetImagePath() != null){
                 disc.setImageDrawable(getDiscDrawable(musicData.getNetImagePath()));
@@ -442,11 +450,11 @@ public class DiscView extends RelativeLayout {
         Music musicData = mMusicDatas.get(0);
         if (mIPlayInfo != null) {
             mIPlayInfo.onMusicInfoChanged(musicData.getMusicName(), musicData.getMusician());
-            if (musicData.getImagePath() != null) {
+            if (musicData.getImagePath() != null && musicData.getImagePath() != 0) {
                 mIPlayInfo.onMusicPicChanged(musicData.getImagePath());
             }
             if (musicData.getNetImagePath() != null) {
-                mIPlayInfo.onMusicPicChanged(musicData.getNetImagePath());
+                //mIPlayInfo.onMusicPicChanged(musicData.getNetImagePath());
             }
         }
     }
@@ -561,7 +569,7 @@ public class DiscView extends RelativeLayout {
     public void notifyMusicPicChanged(int position) {
         if (mIPlayInfo != null) {
             Music musicData = mMusicDatas.get(position);
-            if (musicData.getImagePath() != null) {
+            if (musicData.getImagePath() != null && musicData.getImagePath() != 0) {
                 mIPlayInfo.onMusicPicChanged(musicData.getImagePath());
             }
             if (musicData.getNetImagePath() != null) {
@@ -653,6 +661,17 @@ public class DiscView extends RelativeLayout {
         @Override
         public boolean isViewFromObject(View view, Object object) {
             return view == object;
+        }
+    }
+
+    public List<Bitmap> getGc() {
+        return gc;
+    }
+
+    public void recyleBitmap() {
+        for (Bitmap bitmap : getGc()) {
+            //回收掉不用的bitmap， Diskview里的
+            bitmap.recycle();
         }
     }
 }

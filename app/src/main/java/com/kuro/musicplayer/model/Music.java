@@ -9,6 +9,26 @@ public class Music implements Serializable {
     private String path;
     private Integer imagePath;
     private String netImagePath;
+    //0 local， 1 online
+    public Integer type;
+    //网易云系统里的id
+    public Integer nId;
+
+    public Integer getnId() {
+        return nId;
+    }
+
+    public void setnId(Integer nId) {
+        this.nId = nId;
+    }
+
+    public Integer getType() {
+        return type;
+    }
+
+    public void setType(Integer type) {
+        this.type = type;
+    }
 
     public String getNetImagePath() {
         return netImagePath;
